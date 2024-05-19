@@ -3,6 +3,7 @@ import sys
 import logging
 import configparser
 import time
+import win32com.client
 import win32con
 import win32api
 
@@ -74,7 +75,7 @@ class ContextMenuHandler:
             self.logger.error(f"Error reading file {file}: {e}")
 
 def register():
-    command = r'"C:\Users\Yuriy\Documents\GitHub\FileAppender\run_append_files.bat" "%1"'
+    command = r'"C:\Users\Yuriy\Documents\GitHub\FileAppender\run_append_files.bat" "%V"'
     win32api.RegSetValue(win32con.HKEY_CLASSES_ROOT, r'*\\shell\\AppendFiles\\command', win32con.REG_SZ, command)
     win32api.RegSetValue(win32con.HKEY_CLASSES_ROOT, r'*\\shell\\AppendFiles', win32con.REG_SZ, 'Append Files')
 
