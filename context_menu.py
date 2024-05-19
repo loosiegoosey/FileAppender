@@ -1,6 +1,8 @@
 import os
 import sys
 import logging
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
 import win32con
 import win32api
 import win32gui
@@ -34,7 +36,7 @@ class ContextMenuHandler:
     def invoke_command(self, lpici):
         if lpici.lpVerb == 0:  # "Append Files" command id
             files = self.get_selected_files()
-            self.append_files(files)
+            self.append_files_with_gui(files)
 
     def get_selected_files(self):
         shell = win32com.client.Dispatch("Shell.Application")
@@ -43,11 +45,24 @@ class ContextMenuHandler:
         selected_files = [item.Path for item in items if item.IsSelected]
         return selected_files
 
-    def append_files(self, files):
+    def append_files_with_gui(self, files):
         try:
-            output_file = os.path.join(os.getcwd(), "appended_files.txt")
+            root = tk.Tk()
+            root.withdraw()
+            output_file = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
+            if not output_file:
+                return
+
+            progress = tk.Tk()
+            progress.title("Appending Files")
+            ttk.Label(progress, text="Appending files...").grid(column=0, row=0, padx=10, pady=10)
+            pb = ttk.Progressbar(progress, orient="horizontal", mode="determinate", length=300)
+            pb.grid(column=0, row=1, padx=10, pady=10)
+            pb["maximum"] = len(files)
+            progress.update_idletasks()
+
             with open(output_file, "w", encoding='utf-8') as outfile:
-                for file in files:
+                for i, file in enumerate(files):
                     try:
                         with open(file, "r", encoding='utf-8') as infile:
                             outfile.write(f"{os.path.basename(file)} content:\n")
@@ -56,10 +71,14 @@ class ContextMenuHandler:
                     except Exception as e:
                         self.logger.error(f"Error reading file {file}: {e}")
                         continue
+                    pb["value"] = i + 1
+                    progress.update_idletasks()
+
+            progress.destroy()
             os.system(f'notepad++ {output_file}')
         except Exception as e:
             self.logger.error(f"Error appending files: {e}")
-            win32api.MessageBox(0, f"Error appending files: {e}", "Error", win32con.MB_ICONERROR)
+            messagebox.showerror("Error", f"Error appending files: {e}")
 
 def register():
     handler = ContextMenuHandler()
