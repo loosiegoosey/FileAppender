@@ -2,14 +2,13 @@ import os
 import sys
 import logging
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import messagebox, ttk
 import configparser
 import time
 import win32con
 import win32api
 import win32gui
 import win32com.client
-from win32com.shell import shell, shellcon
 
 class ContextMenuHandler:
     def __init__(self):
@@ -67,10 +66,11 @@ class ContextMenuHandler:
     def get_selected_files(self):
         # Use the shell to get the selected files
         shell = win32com.client.Dispatch("Shell.Application")
-        folder = shell.Namespace(os.path.dirname(sys.argv[0]))
-        items = folder.Items()
-        selected_files = [item.Path for item in items if item.IsSelected]
-        self.logger.debug(f"Selected files in folder: {selected_files}")
+        selected_files = []
+        for folder in shell.Windows():
+            if folder.Document.FocusedItem:
+                selected_files.append(folder.Document.FocusedItem.Path)
+        self.logger.debug(f"Selected files: {selected_files}")
         return selected_files
 
     def append_files(self, files):
@@ -107,7 +107,7 @@ class ContextMenuHandler:
 
 def register():
     handler = ContextMenuHandler()
-    command = f'python "{os.path.abspath(__file__)}" %1'
+    command = f'python "{os.path.abspath(__file__)}" %*'
     win32api.RegSetValue(win32con.HKEY_CLASSES_ROOT, r'*\\shell\\AppendFiles\\command', win32con.REG_SZ, command)
     win32api.RegSetValue(win32con.HKEY_CLASSES_ROOT, r'*\\shell\\AppendFiles', win32con.REG_SZ, 'Append Files')
 
