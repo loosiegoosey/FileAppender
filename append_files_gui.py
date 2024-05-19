@@ -1,4 +1,5 @@
 import os
+import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import logging
@@ -16,7 +17,7 @@ class FileAppenderApp:
     def setup_logger(self):
         self.logger = logging.getLogger("FileAppenderApp")
         handler = logging.FileHandler("file_appender.log", encoding='utf-8')
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levellevel)s - %(message)s')
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
         self.logger.setLevel(logging.DEBUG)
@@ -36,7 +37,6 @@ class FileAppenderApp:
         else:
             self.config.read(config_file)
 
-        # Use default_documents_dir if OutputDirectory is not set or empty
         if not self.config['DEFAULT']['OutputDirectory']:
             self.config['DEFAULT']['OutputDirectory'] = default_documents_dir
 
