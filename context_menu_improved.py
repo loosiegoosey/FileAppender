@@ -99,7 +99,11 @@ class ContextMenuHandler:
 
     def append_files_with_gui(self, files):
         try:
-            output_file = os.path.join(self.config['DEFAULT']['OutputDirectory'], 'appended_files.txt')
+            output_directory = self.config['DEFAULT']['OutputDirectory']
+            if not os.path.exists(output_directory):
+                os.makedirs(output_directory)
+            output_file = os.path.join(output_directory, 'appended_files.txt')
+            self.logger.debug(f"Output file path: {output_file}")
 
             progress = tk.Tk()
             progress.title("Appending Files")
