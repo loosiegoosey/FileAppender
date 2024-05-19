@@ -1,49 +1,63 @@
 import os
-import sys
+import tkinter as tk
+from tkinter import filedialog, messagebox
 import logging
 import configparser
 import time
-import win32con
-import win32api
 
-class ContextMenuHandler:
-    def __init__(self):
-        self.logger = self.setup_logger()
-        self.config = self.load_config()
+class FileAppenderApp:
+    def __init__(self, root, initial_dir):
+        self.root = root
+        self.initial_dir = initial_dir
+        self.setup_logger()
+        self.load_config()
+        self.create_widgets()
 
     def setup_logger(self):
-        logger = logging.getLogger("ContextMenuHandler")
-        handler = logging.FileHandler("context_menu_handler.log", encoding='utf-8')
+        self.logger = logging.getLogger("FileAppenderApp")
+        handler = logging.FileHandler("file_appender.log", encoding='utf-8')
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        logger.setLevel(logging.DEBUG)
-        return logger
+        self.logger.addHandler(handler)
+        self.logger.setLevel(logging.DEBUG)
 
     def load_config(self):
-        config = configparser.ConfigParser()
+        self.config = configparser.ConfigParser()
         config_file = "context_menu_config.ini"
         default_documents_dir = os.path.expanduser('~\\Documents')
         if not os.path.exists(config_file):
-            config['DEFAULT'] = {
+            self.config['DEFAULT'] = {
                 'OutputDirectory': default_documents_dir,
                 'IncludeFilePath': 'False',
                 'IncludeTimestamp': 'False'
             }
             with open(config_file, 'w') as configfile:
-                config.write(configfile)
+                self.config.write(configfile)
         else:
-            config.read(config_file)
+            self.config.read(config_file)
 
         # Use default_documents_dir if OutputDirectory is not set or empty
-        if not config['DEFAULT']['OutputDirectory']:
-            config['DEFAULT']['OutputDirectory'] = default_documents_dir
+        if not self.config['DEFAULT']['OutputDirectory']:
+            self.config['DEFAULT']['OutputDirectory'] = default_documents_dir
 
-        return config
+    def create_widgets(self):
+        self.root.title("Append Files")
+        self.select_button = tk.Button(self.root, text="Select Files", command=self.select_files)
+        self.select_button.pack(pady=20)
+        self.append_button = tk.Button(self.root, text="Append Files", command=self.append_files, state=tk.DISABLED)
+        self.append_button.pack(pady=20)
+        self.selected_files = []
 
-    def append_files(self, files):
+    def select_files(self):
+        files = filedialog.askopenfilenames(initialdir=self.initial_dir, title="Select Files to Append")
+        if files:
+            self.selected_files = files
+            self.append_button.config(state=tk.NORMAL)
+            self.logger.debug(f"Selected files: {self.selected_files}")
+
+    def append_files(self):
         try:
-            output_directory = self.config['DEFAULT']['OutputDirectory']
+            output_directory = self.initial_dir
             self.logger.debug(f"Output directory: {output_directory}")
             if not os.path.exists(output_directory):
                 os.makedirs(output_directory)
@@ -51,15 +65,16 @@ class ContextMenuHandler:
             self.logger.debug(f"Output file path: {output_file}")
 
             with open(output_file, "w", encoding='utf-8') as outfile:
-                for file in files:
+                for file in self.selected_files:
                     self.logger.debug(f"Processing file: {file}")
                     self.process_file(file, outfile)
 
             self.logger.debug(f"Opening file in Notepad++: {output_file}")
             os.system(f'notepad++ "{output_file}"')
+            messagebox.showinfo("Success", f"Files have been appended to {output_file}")
         except Exception as e:
             self.logger.error(f"Error appending files: {e}")
-            print(f"Error appending files: {e}")
+            messagebox.showerror("Error", f"Error appending files: {e}")
 
     def process_file(self, file, outfile):
         try:
@@ -74,15 +89,11 @@ class ContextMenuHandler:
         except Exception as e:
             self.logger.error(f"Error reading file {file}: {e}")
 
-def register():
-    command = r'"C:\Users\Yuriy\Documents\GitHub\FileAppender\run_append_files_elevated.bat"'
-    win32api.RegSetValue(win32con.HKEY_CLASSES_ROOT, r'*\\shell\\AppendFiles\\command', win32con.REG_SZ, command)
-    win32api.RegSetValue(win32con.HKEY_CLASSES_ROOT, r'*\\shell\\AppendFiles', win32con.REG_SZ, 'Append Files')
+def main():
+    initial_dir = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser('~')
+    root = tk.Tk()
+    app = FileAppenderApp(root, initial_dir)
+    root.mainloop()
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        handler = ContextMenuHandler()
-        handler.logger.debug(f"Command-line arguments: {sys.argv}")
-        handler.append_files(sys.argv[1:])
-    else:
-        register()
+    main()
