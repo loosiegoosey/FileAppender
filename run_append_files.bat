@@ -6,6 +6,9 @@ for /f "delims=" %%I in ('powershell -command "Get-Clipboard -Format FileDropLis
     set args=!args! "%%~I"
 )
 
+echo Arguments to be passed: !args!
+pause
+
 python "C:\Users\Yuriy\Documents\GitHub\FileAppender\context_menu_improved.py" !args!
 
 endlocal

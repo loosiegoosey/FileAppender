@@ -75,7 +75,7 @@ class ContextMenuHandler:
             self.logger.error(f"Error reading file {file}: {e}")
 
 def register():
-    command = r'"C:\Users\Yuriy\Documents\GitHub\FileAppender\run_append_files.bat" %*'
+    command = r'"C:\Users\Yuriy\Documents\GitHub\FileAppender\run_append_files_elevated.bat"'
     win32api.RegSetValue(win32con.HKEY_CLASSES_ROOT, r'*\\shell\\AppendFiles\\command', win32con.REG_SZ, command)
     win32api.RegSetValue(win32con.HKEY_CLASSES_ROOT, r'*\\shell\\AppendFiles', win32con.REG_SZ, 'Append Files')
 
