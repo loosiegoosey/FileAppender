@@ -1,8 +1,11 @@
 import os
 import sys
 import logging
+import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+import configparser
+import time
 import win32con
 import win32api
 import win32gui
@@ -13,6 +16,7 @@ class ContextMenuHandler:
     def __init__(self):
         self.hMenu = None
         self.logger = self.setup_logger()
+        self.config = self.load_config()
 
     def setup_logger(self):
         logger = logging.getLogger("ContextMenuHandler")
@@ -22,6 +26,21 @@ class ContextMenuHandler:
         logger.addHandler(handler)
         logger.setLevel(logging.DEBUG)
         return logger
+
+    def load_config(self):
+        config = configparser.ConfigParser()
+        config_file = "context_menu_config.ini"
+        if not os.path.exists(config_file):
+            config['DEFAULT'] = {
+                'OutputDirectory': os.getcwd(),
+                'IncludeFilePath': 'False',
+                'IncludeTimestamp': 'False'
+            }
+            with open(config_file, 'w') as configfile:
+                config.write(configfile)
+        else:
+            config.read(config_file)
+        return config
 
     def add_context_menu_item(self, hMenu, menu_text, command_id):
         win32gui.InsertMenu(hMenu, 0, win32con.MF_BYPOSITION | win32con.MF_STRING, command_id, menu_text)
@@ -49,7 +68,11 @@ class ContextMenuHandler:
         try:
             root = tk.Tk()
             root.withdraw()
-            output_file = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
+            output_file = filedialog.asksaveasfilename(
+                initialdir=self.config['DEFAULT']['OutputDirectory'],
+                defaultextension=".txt",
+                filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+            )
             if not output_file:
                 return
 
@@ -61,24 +84,42 @@ class ContextMenuHandler:
             pb["maximum"] = len(files)
             progress.update_idletasks()
 
-            with open(output_file, "w", encoding='utf-8') as outfile:
-                for i, file in enumerate(files):
-                    try:
-                        with open(file, "r", encoding='utf-8') as infile:
-                            outfile.write(f"{os.path.basename(file)} content:\n")
-                            outfile.write(infile.read())
-                            outfile.write("\n\n")
-                    except Exception as e:
-                        self.logger.error(f"Error reading file {file}: {e}")
-                        continue
-                    pb["value"] = i + 1
-                    progress.update_idletasks()
+            threads = []
+            for i, file in enumerate(files):
+                thread = threading.Thread(target=self.process_file, args=(file, output_file, pb, i, progress))
+                threads.append(thread)
+                thread.start()
+
+            for thread in threads:
+                thread.join()
 
             progress.destroy()
             os.system(f'notepad++ {output_file}')
         except Exception as e:
             self.logger.error(f"Error appending files: {e}")
             messagebox.showerror("Error", f"Error appending files: {e}")
+
+    def process_file(self, file, output_file, pb, index, progress):
+        retry_attempts = 3
+        while retry_attempts > 0:
+            try:
+                with open(file, "r", encoding='utf-8') as infile:
+                    with open(output_file, "a", encoding='utf-8') as outfile:
+                        if self.config['DEFAULT'].getboolean('IncludeTimestamp'):
+                            outfile.write(f"Timestamp: {time.ctime()}\n")
+                        outfile.write(f"{os.path.basename(file)} content:\n")
+                        if self.config['DEFAULT'].getboolean('IncludeFilePath'):
+                            outfile.write(f"File path: {file}\n")
+                        outfile.write(infile.read())
+                        outfile.write("\n\n")
+                pb["value"] = index + 1
+                progress.update_idletasks()
+                return
+            except Exception as e:
+                self.logger.error(f"Error reading file {file}: {e}")
+                retry_attempts -= 1
+                time.sleep(1)
+        self.logger.error(f"Failed to read file {file} after multiple attempts")
 
 def register():
     handler = ContextMenuHandler()
