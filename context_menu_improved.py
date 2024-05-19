@@ -60,44 +60,20 @@ class ContextMenuHandler:
     def invoke_command(self, lpici):
         if lpici.lpVerb == 0:  # "Append Files" command id
             files = self.get_selected_files()
+            self.logger.debug(f"Selected files: {files}")
             if files:
-                self.append_files_with_gui(files)
+                self.append_files(files)
 
     def get_selected_files(self):
-        self.logger.debug(f"Command-line arguments: {sys.argv}")
-        return sys.argv[1:]  # Get file paths from command-line arguments
+        # Use the shell to get the selected files
+        shell = win32com.client.Dispatch("Shell.Application")
+        folder = shell.Namespace(os.path.dirname(sys.argv[0]))
+        items = folder.Items()
+        selected_files = [item.Path for item in items if item.IsSelected]
+        self.logger.debug(f"Selected files in folder: {selected_files}")
+        return selected_files
 
-    def show_settings_dialog(self, files):
-        settings_dialog = tk.Tk()
-        settings_dialog.title("Settings")
-
-        ttk.Label(settings_dialog, text="Output Directory:").grid(column=0, row=0, padx=10, pady=5, sticky='W')
-        output_dir_entry = ttk.Entry(settings_dialog, width=50)
-        output_dir_entry.insert(0, self.config['DEFAULT']['OutputDirectory'])
-        output_dir_entry.grid(column=1, row=0, padx=10, pady=5)
-
-        ttk.Label(settings_dialog, text="Include File Path:").grid(column=0, row=1, padx=10, pady=5, sticky='W')
-        include_file_path = tk.BooleanVar(value=self.config['DEFAULT'].getboolean('IncludeFilePath'))
-        ttk.Checkbutton(settings_dialog, variable=include_file_path).grid(column=1, row=1, padx=10, pady=5, sticky='W')
-
-        ttk.Label(settings_dialog, text="Include Timestamp:").grid(column=0, row=2, padx=10, pady=5, sticky='W')
-        include_timestamp = tk.BooleanVar(value=self.config['DEFAULT'].getboolean('IncludeTimestamp'))
-        ttk.Checkbutton(settings_dialog, variable=include_timestamp).grid(column=1, row=2, padx=10, pady=5, sticky='W')
-
-        def on_save():
-            self.config['DEFAULT']['OutputDirectory'] = output_dir_entry.get()
-            self.config['DEFAULT']['IncludeFilePath'] = str(include_file_path.get())
-            self.config['DEFAULT']['IncludeTimestamp'] = str(include_timestamp.get())
-            with open("context_menu_config.ini", 'w') as configfile:
-                self.config.write(configfile)
-            settings_dialog.destroy()
-            self.append_files_with_gui(files)
-
-        ttk.Button(settings_dialog, text="Save", command=on_save).grid(column=0, row=3, columnspan=2, pady=10)
-
-        settings_dialog.mainloop()
-
-    def append_files_with_gui(self, files):
+    def append_files(self, files):
         try:
             output_directory = self.config['DEFAULT']['OutputDirectory']
             self.logger.debug(f"Output directory: {output_directory}")
@@ -131,7 +107,8 @@ class ContextMenuHandler:
 
 def register():
     handler = ContextMenuHandler()
-    win32api.RegSetValue(win32con.HKEY_CLASSES_ROOT, r'*\\shell\\AppendFiles\\command', win32con.REG_SZ, f'python "{os.path.abspath(__file__)}" "%1"')
+    command = f'python "{os.path.abspath(__file__)}" %1'
+    win32api.RegSetValue(win32con.HKEY_CLASSES_ROOT, r'*\\shell\\AppendFiles\\command', win32con.REG_SZ, command)
     win32api.RegSetValue(win32con.HKEY_CLASSES_ROOT, r'*\\shell\\AppendFiles', win32con.REG_SZ, 'Append Files')
 
 if __name__ == "__main__":
