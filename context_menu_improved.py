@@ -1,13 +1,10 @@
 import os
 import sys
 import logging
-import tkinter as tk
-from tkinter import messagebox, ttk
 import configparser
 import time
 import win32con
 import win32api
-import win32gui
 
 class ContextMenuHandler:
     def __init__(self):
@@ -61,7 +58,7 @@ class ContextMenuHandler:
             os.system(f'notepad++ "{output_file}"')
         except Exception as e:
             self.logger.error(f"Error appending files: {e}")
-            messagebox.showerror("Error", f"Error appending files: {e}")
+            print(f"Error appending files: {e}")
 
     def process_file(self, file, outfile):
         try:
@@ -77,7 +74,7 @@ class ContextMenuHandler:
             self.logger.error(f"Error reading file {file}: {e}")
 
 def register():
-    command = f'python "{os.path.abspath(__file__)}" "%1"'
+    command = r'"C:\Users\Yuriy\Documents\GitHub\FileAppender\run_append_files.bat" "%1"'
     win32api.RegSetValue(win32con.HKEY_CLASSES_ROOT, r'*\\shell\\AppendFiles\\command', win32con.REG_SZ, command)
     win32api.RegSetValue(win32con.HKEY_CLASSES_ROOT, r'*\\shell\\AppendFiles', win32con.REG_SZ, 'Append Files')
 
