@@ -3,7 +3,6 @@ import sys
 import logging
 import configparser
 import time
-import win32com.client
 import win32con
 import win32api
 
@@ -15,7 +14,7 @@ class ContextMenuHandler:
     def setup_logger(self):
         logger = logging.getLogger("ContextMenuHandler")
         handler = logging.FileHandler("context_menu_handler.log", encoding='utf-8')
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levellevel)s - %(message)s')
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         logger.setLevel(logging.DEBUG)
@@ -53,6 +52,7 @@ class ContextMenuHandler:
 
             with open(output_file, "w", encoding='utf-8') as outfile:
                 for file in files:
+                    self.logger.debug(f"Processing file: {file}")
                     self.process_file(file, outfile)
 
             self.logger.debug(f"Opening file in Notepad++: {output_file}")
@@ -75,7 +75,7 @@ class ContextMenuHandler:
             self.logger.error(f"Error reading file {file}: {e}")
 
 def register():
-    command = r'"C:\Users\Yuriy\Documents\GitHub\FileAppender\run_append_files.bat" "%V"'
+    command = r'"C:\Users\Yuriy\Documents\GitHub\FileAppender\run_append_files.bat" %*'
     win32api.RegSetValue(win32con.HKEY_CLASSES_ROOT, r'*\\shell\\AppendFiles\\command', win32con.REG_SZ, command)
     win32api.RegSetValue(win32con.HKEY_CLASSES_ROOT, r'*\\shell\\AppendFiles', win32con.REG_SZ, 'Append Files')
 

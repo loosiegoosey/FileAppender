@@ -1,5 +1,11 @@
 @echo off
-setlocal
-set "args=%*"
-python "C:\Users\Yuriy\Documents\GitHub\FileAppender\context_menu_improved.py" %args%
+setlocal enabledelayedexpansion
+
+:: Use PowerShell to get all selected files and pass them to the Python script
+for /f "delims=" %%I in ('powershell -command "Get-Clipboard -Format FileDropList | ForEach-Object {Write-Output $_}"') do (
+    set args=!args! "%%~I"
+)
+
+python "C:\Users\Yuriy\Documents\GitHub\FileAppender\context_menu_improved.py" !args!
+
 endlocal
